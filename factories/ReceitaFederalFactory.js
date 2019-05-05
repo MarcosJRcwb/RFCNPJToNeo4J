@@ -63,7 +63,7 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               add(endereco, 'tipoLogradouro', linha.substr(382, 20));
               add(endereco, 'logradouro', linha.substr(402, 60));
               add(endereco, 'numero', linha.substr(462, 6));
-              add(endereco, 'complemento', linha.substr(468, 156));
+              add(endereco, 'complemento', linha.substr(468, 156),true);
               add(endereco, 'bairro', linha.substr(624, 50));
               add(endereco, 'cep', linha.substr(674, 8));
               add(endereco, 'uf', linha.substr(682, 2));

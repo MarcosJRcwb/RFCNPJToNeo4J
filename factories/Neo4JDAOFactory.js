@@ -45,6 +45,7 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
       const singleRecord = pjPersistida.records[0];
       const node = singleRecord.get(0);
       console.log(node.properties);
+      pj.endereco.cnpj = pj.cnpj;
       // Busca um endereco informado, se nao existir, cria
       const enderecoPersistido = await session.run(
         `MERGE (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro, 
