@@ -1,0 +1,1 @@
+CREATE CONSTRAINT ON (pj:PessoaJuridica) ASSERT pj.cnpj IS UNIQUE;

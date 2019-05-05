@@ -21,9 +21,15 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
 
   /**
    * Percorre o arquivo linha a linha enquanto repassada cada linha para a funcao {funcaoLeituraLinha}
+   * @param {string} filtroUF Se setado, retorna apenas registros com a UF igual ao passado
+   * @param {string} filtroCidade Se setado, retorna apenas registros com a nome da cidade igual ao passado
+   * @param {string} filtroBairro Se setado, retorna apenas registros com o nome do bairro igual ao passado
+   * @param {boolean} filtroIncluirBaixadas Se FALSE, exclui do retorno as empresas que ja deram baixa
    * @param {function} funcaoCallbackRegistro Funcao que recebera o registro contido em cada uma das linhas do arquivo
    */
-  function leia({ funcaoCallbackRegistro }) {
+  function leia({
+    filtroUF, filtroCidade, filtroBairro, filtroIncluirBaixadas, funcaoCallbackRegistro,
+  }) {
     let cabecalhoLido = false;
     fs.createReadStream(pathArquivo)
       .pipe(es.split())
@@ -34,55 +40,62 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
             dataGravacao = linha.substr(28, 8);
             cabecalhoLido = true;
           } else if (linha.substring(0, 1) === '1') {
-            const cnpj = {};
-            add(cnpj, 'cnpj', linha.substr(3, 14));
-            add(cnpj, 'razaoSocial', linha.substr(18, 150));
-            add(cnpj, 'nomeFantasia', linha.substr(168, 55));
-            add(cnpj, 'codigoSituacaoCadastral', linha.substr(223, 2));
-            add(cnpj, 'situacaoCadastral', obtemSituacaoCadastral(linha.substr(223, 2)));
-            add(cnpj, 'dataSituacaoCadastral', linha.substr(225, 8));
-            add(cnpj, 'codigoPais', linha.substr(290, 3));
-            add(cnpj, 'nomePais', linha.substr(293, 70));
-            add(cnpj, 'nomeCidadeExterior', linha.substr(235, 55));
-            add(cnpj, 'codigoNaturezaJuridica', linha.substr(363, 4));
-            add(cnpj, 'dataInicioAtividade', linha.substr(367, 8));
-            add(cnpj, 'cnaePrincipal', linha.substr(375, 7));
-            const endereco = {};
-            add(endereco, 'tipoLogradouro', linha.substr(382, 20));
-            add(endereco, 'logradouro', linha.substr(402, 60));
-            add(endereco, 'numero', linha.substr(462, 6));
-            add(endereco, 'complemento', linha.substr(468, 156));
-            add(endereco, 'bairro', linha.substr(624, 50));
-            add(endereco, 'cep', linha.substr(674, 8));
-            add(endereco, 'uf', linha.substr(682, 2));
-            add(endereco, 'codigoMunicipio', linha.substr(684, 4));
-            add(endereco, 'municipio', linha.substr(688, 50));
-            add(cnpj, 'endereco', endereco);
-            cnpj.telefones = [];
-            const telefone1 = {};
-            add(telefone1, 'ddd', linha.substr(738, 4));
-            add(telefone1, 'telefone', linha.substr(742, 8));
-            if (Object.keys(telefone1).length > 0) {
-              cnpj.telefones.push(telefone1);
+            if (
+              (filtroUF == null || filtroUF.trim() == '' || linha.substr(682, 2) == filtroUF.toUpperCase())
+              && (filtroCidade == null || filtroCidade.trim() == '' || linha.substr(688, 50) == filtroCidade.toUpperCase())
+              && (filtroBairro == null || filtroBairro.trim() == '' || linha.substr(624, 50) == filtroBairro.toUpperCase())
+              && (filtroIncluirBaixadas || linha.substr(223, 2) !== '08')
+            ) {
+              const cnpj = {};
+              add(cnpj, 'cnpj', linha.substr(3, 14), true);
+              add(cnpj, 'razaoSocial', linha.substr(18, 150), true);
+              add(cnpj, 'nomeFantasia', linha.substr(168, 55), true);
+              add(cnpj, 'codigoSituacaoCadastral', linha.substr(223, 2), true);
+              add(cnpj, 'situacaoCadastral', obtemSituacaoCadastral(linha.substr(223, 2)), true);
+              add(cnpj, 'dataSituacaoCadastral', linha.substr(225, 8), true);
+              add(cnpj, 'codigoPais', linha.substr(290, 3));
+              add(cnpj, 'nomePais', linha.substr(293, 70));
+              add(cnpj, 'nomeCidadeExterior', linha.substr(235, 55));
+              add(cnpj, 'codigoNaturezaJuridica', linha.substr(363, 4), true);
+              add(cnpj, 'dataInicioAtividade', linha.substr(367, 8), true);
+              add(cnpj, 'cnaePrincipal', linha.substr(375, 7), true);
+              const endereco = {};
+              add(endereco, 'tipoLogradouro', linha.substr(382, 20));
+              add(endereco, 'logradouro', linha.substr(402, 60));
+              add(endereco, 'numero', linha.substr(462, 6));
+              add(endereco, 'complemento', linha.substr(468, 156));
+              add(endereco, 'bairro', linha.substr(624, 50));
+              add(endereco, 'cep', linha.substr(674, 8));
+              add(endereco, 'uf', linha.substr(682, 2));
+              add(endereco, 'codigoMunicipio', linha.substr(684, 4));
+              add(endereco, 'municipio', linha.substr(688, 50));
+              add(cnpj, 'endereco', endereco);
+              cnpj.telefones = [];
+              const telefone1 = {};
+              add(telefone1, 'ddd', linha.substr(738, 4));
+              add(telefone1, 'telefone', linha.substr(742, 8));
+              if (Object.keys(telefone1).length > 0) {
+                cnpj.telefones.push(telefone1);
+              }
+              const telefone2 = {};
+              add(telefone2, 'ddd', linha.substr(750, 4));
+              add(telefone2, 'telefone', linha.substr(755, 8));
+              if (Object.keys(telefone2).length > 0) {
+                cnpj.telefones.push(telefone2);
+              }
+              const fax = {};
+              add(fax, 'ddd', linha.substr(762, 4));
+              add(fax, 'fax', linha.substr(766, 8));
+              if (Object.keys(fax).length > 0) {
+                cnpj.telefones.push(fax);
+              }
+              add(cnpj, 'email', linha.substr(774, 115));
+              add(cnpj, 'codigoPorteEmpresa', linha.substr(905, 2));
+              add(cnpj, 'porteEmpresa', obtemPorteEmpresa(linha.substr(905, 2)));
+              add(cnpj, 'optanteMEI', linha.substr(924, 1));
+              add(cnpj, 'situacaoEspecial', linha.substr(925, 23));
+              funcaoCallbackRegistro(cnpj);
             }
-            const telefone2 = {};
-            add(telefone2, 'ddd', linha.substr(750, 4));
-            add(telefone2, 'telefone', linha.substr(755, 8));
-            if (Object.keys(telefone2).length > 0) {
-              cnpj.telefones.push(telefone2);
-            }
-            const fax = {};
-            add(fax, 'ddd', linha.substr(762, 4));
-            add(fax, 'fax', linha.substr(766, 8));
-            if (Object.keys(fax).length > 0) {
-              cnpj.telefones.push(fax);
-            }
-            add(cnpj, 'email', linha.substr(774, 115));
-            add(cnpj, 'codigoPorteEmpresa', linha.substr(905, 2));
-            add(cnpj, 'porteEmpresa', obtemPorteEmpresa(linha.substr(905, 2)));
-            add(cnpj, 'optanteMEI', linha.substr(924, 1));
-            add(cnpj, 'situacaoEspecial', linha.substr(925, 23));
-            funcaoCallbackRegistro(cnpj);
           }
         }),
       );
@@ -93,13 +106,16 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
  * Adiciona ao objeto {objetoTarget} uma propridade de nome {propriedade} caso
  * o {valor} seja diferente de null e, em caso de ser string, nao seja vazio
  *
+ * Caso o parametro {adicionaMesmoNULL} seja TRUE, entao adiciona assim mesmo
+ *
  * @param {object} objetoTarget
  * @param {string} propriedade
  * @param {*} valor
+ * @param {boolean} adicionaMesmoNULLOuVazio Se TRUE, adiciona a propriedade mesmo que esteja NULL ou string vazia
  */
-function add(objetoTarget, propriedade, valor) {
-  if (valor != null) {
-    if (typeof valor === 'string' && valor.trim().length > 0) {
+function add(objetoTarget, propriedade, valor, adicionaMesmoNULLOuVazio = false) {
+  if (valor != null || adicionaMesmoNULLOuVazio) {
+    if (typeof valor === 'string' && (valor.trim().length > 0 || adicionaMesmoNULLOuVazio)) {
       objetoTarget[propriedade] = valor.trim();
     } else if (typeof valor === 'object' && Object.keys(valor).length > 0) {
       objetoTarget[propriedade] = valor;

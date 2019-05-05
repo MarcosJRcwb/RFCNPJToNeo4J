@@ -10,7 +10,9 @@ const neo4j = require('neo4j-driver').v1;
  * @returns {object} Objeto com utilidades para interacao com base Neo4J
  */
 module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
-  const driver = neo4j.driver(uri, neo4j.auth.basic(login, senha));
+  const driver = neo4j.driver(uri, neo4j.auth.basic(login, senha), {
+    encrypted: 'ENCRYPTION_OFF', // workaround por conta da excecao 'Client network socket disconnected before secure TLS connection was established'
+  });
 
   return Object.freeze({
     salvaPJ,
@@ -22,30 +24,56 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
    *
    * @param {object} pj Dados da PJ a ser persistido
    */
-  function salvaPJ({ pj }) {
+  async function salvaPJ({ pj }) {
     const session = driver.session();
-    const resultPromise = session.run(
-      `CREATE (a:PJ {cnpj: $cnpj, 
-        razaoSocial: $razaoSocial, 
-        nomeFantasia: $nomeFantasia, 
-        codigoSituacaoCadastral: $codigoSituacaoCadastral, 
-        situacaoCadastral: $situacaoCadastral,
-        dataSituacaoCadastral: $dataSituacaoCadastral,
-        codigoNaturezaJuridica: $codigoNaturezaJuridica,
-        dataInicioAtividade: $dataInicioAtividade,
-        cnaePrincipal: $cnaePrincipal}) RETURN a`,
-      {
+    try {
+      // Busca uma Pessoa Juridica pelo CNPJ informado, se nao existir, cria
+      const pjPersistida = await session.run(
+        `MERGE (a:PessoaJuridica {cnpj: $cnpj})
+       ON CREATE SET
+        a.cnpj = $cnpj, 
+        a.razaoSocial = $razaoSocial, 
+        a.nomeFantasia = $nomeFantasia, 
+        a.codigoSituacaoCadastral = $codigoSituacaoCadastral, 
+        a.situacaoCadastral = $situacaoCadastral,
+        a.dataSituacaoCadastral = $dataSituacaoCadastral,
+        a.codigoNaturezaJuridica = $codigoNaturezaJuridica,
+        a.dataInicioAtividade = $dataInicioAtividade,
+        a.cnaePrincipal = $cnaePrincipal RETURN a`,
         pj,
-      },
-    );
-    resultPromise.then((result) => {
-      session.close();
-
-      const singleRecord = result.records[0];
+      );
+      const singleRecord = pjPersistida.records[0];
       const node = singleRecord.get(0);
+      console.log(node.properties);
+      // Busca um endereco informado, se nao existir, cria
+      const enderecoPersistido = await session.run(
+        `MERGE (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro, 
+          complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro})
+       ON CREATE SET
+        e.tipoLogradouro = $tipoLogradouro, 
+        e.logradouro = $logradouro, 
+        e.numero = $numero, 
+        e.complemento = $complemento, 
+        e.bairro = $bairro,
+        e.cep = $cep,
+        e.uf = $uf,
+        e.codigoMunicipio = $codigoMunicipio,
+        e.municipio = $municipio 
 
-      console.log(node.properties.name);
-    });
+        MERGE (p:PessoaJuridica {cnpj: $cnpj})
+        CREATE (p)-[r:SEDIADA_EM]->(e)  
+        RETURN e`,
+        pj.endereco,
+      );
+      const enderecoRecord = enderecoPersistido.records[0];
+      const nodeEndereco = enderecoRecord.get(0);
+      console.log(nodeEndereco.properties);
+    } catch (e) {
+      console.error(e.message);
+      global.log.error(e);
+    } finally {
+      session.close();
+    }
   }
 
   /**
