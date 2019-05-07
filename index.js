@@ -31,6 +31,7 @@ const neo4J = Neo4JDAOFactory({ uri: process.env.NEO4J_URI, login: process.env.N
     filtroBairro,
     filtroIncluirBaixadas: filtroIncluirBaixadas.toUpperCase() === 'S',
     funcaoCallbackRegistro: callbackRegistro,
+    funcaoCallbackFimArquivo: callbackFimArquivo,
   });
 })();
 
@@ -38,4 +39,8 @@ function callbackRegistro(registro) {
   neo4J.salvaPJ({ pj: registro });
   // console.log(registro);
   // process.exit();
+}
+
+function callbackFimArquivo() {
+  neo4J.encerraConexao();
 }

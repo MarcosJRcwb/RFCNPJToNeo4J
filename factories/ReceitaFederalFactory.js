@@ -26,9 +26,10 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
    * @param {string} filtroBairro Se setado, retorna apenas registros com o nome do bairro igual ao passado
    * @param {boolean} filtroIncluirBaixadas Se FALSE, exclui do retorno as empresas que ja deram baixa
    * @param {function} funcaoCallbackRegistro Funcao que recebera o registro contido em cada uma das linhas do arquivo
+   * @param {function} funcaoCallbackFimArquivo Funcao que sera chamada quando se chegar ao fim do arquivo
    */
   function leia({
-    filtroUF, filtroCidade, filtroBairro, filtroIncluirBaixadas, funcaoCallbackRegistro,
+    filtroUF, filtroCidade, filtroBairro, filtroIncluirBaixadas, funcaoCallbackRegistro, funcaoCallbackFimArquivo,
   }) {
     let cabecalhoLido = false;
     fs.createReadStream(pathArquivo)
@@ -60,15 +61,15 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               add(cnpj, 'dataInicioAtividade', linha.substr(367, 8), true);
               add(cnpj, 'cnaePrincipal', linha.substr(375, 7), true);
               const endereco = {};
-              add(endereco, 'tipoLogradouro', linha.substr(382, 20));
-              add(endereco, 'logradouro', linha.substr(402, 60));
-              add(endereco, 'numero', linha.substr(462, 6));
-              add(endereco, 'complemento', linha.substr(468, 156),true);
-              add(endereco, 'bairro', linha.substr(624, 50));
-              add(endereco, 'cep', linha.substr(674, 8));
-              add(endereco, 'uf', linha.substr(682, 2));
-              add(endereco, 'codigoMunicipio', linha.substr(684, 4));
-              add(endereco, 'municipio', linha.substr(688, 50));
+              add(endereco, 'tipoLogradouro', linha.substr(382, 20), true);
+              add(endereco, 'logradouro', linha.substr(402, 60), true);
+              add(endereco, 'numero', linha.substr(462, 6), true);
+              add(endereco, 'complemento', linha.substr(468, 156), true);
+              add(endereco, 'bairro', linha.substr(624, 50), true);
+              add(endereco, 'cep', linha.substr(674, 8), true);
+              add(endereco, 'uf', linha.substr(682, 2), true);
+              add(endereco, 'codigoMunicipio', linha.substr(684, 4), true);
+              add(endereco, 'municipio', linha.substr(688, 50), true);
               add(cnpj, 'endereco', endereco);
               cnpj.telefones = [];
               const telefone1 = {};
@@ -96,6 +97,8 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               add(cnpj, 'situacaoEspecial', linha.substr(925, 23));
               funcaoCallbackRegistro(cnpj);
             }
+          } else if (linha.substring(0, 1) === '9') {
+            funcaoCallbackFimArquivo();
           }
         }),
       );
