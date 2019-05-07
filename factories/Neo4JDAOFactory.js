@@ -35,7 +35,7 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
         onNext(result) {
           pj.endereco.cnpj = pj.cnpj;
           // Se o CNPJ nao esta na base ainda, entao insere
-          console.log(colors.yellow(pj.cnpj), JSON.stringify(result));
+          //console.log(colors.yellow(pj.cnpj), JSON.stringify(result));
           if (result.length == 0) {
             criaPessoa({
               pj,
