@@ -35,7 +35,7 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
         onNext(result) {
           pj.endereco.cnpj = pj.cnpj;
           // Se o CNPJ nao esta na base ainda, entao insere
-          //console.log(colors.yellow(pj.cnpj), JSON.stringify(result));
+          // console.log(colors.yellow(pj.cnpj), JSON.stringify(result));
           if (result.length == 0) {
             criaPessoa({
               pj,
@@ -71,12 +71,13 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
   }
 
   function criaPessoa({ pj, callBack }) {
+    global.escritasEmEspera += 1;
     session
       .run(
-        `CREATE (a:PessoaJuridica { cnpj : $cnpj, 
-      razaoSocial : $razaoSocial, 
-      nomeFantasia : $nomeFantasia, 
-      codigoSituacaoCadastral : $codigoSituacaoCadastral, 
+        `CREATE (a:PessoaJuridica { cnpj : $cnpj,
+      razaoSocial : $razaoSocial,
+      nomeFantasia : $nomeFantasia,
+      codigoSituacaoCadastral : $codigoSituacaoCadastral,
       situacaoCadastral : $situacaoCadastral,
       dataSituacaoCadastral : $dataSituacaoCadastral,
       codigoNaturezaJuridica : $codigoNaturezaJuridica,
@@ -85,7 +86,10 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
         pj,
       )
       .subscribe({
-        onNext: callBack,
+        onNext: (result) => {
+          global.escritasEmEspera -= 1;
+          callBack(result);
+        },
       });
 
     // Busca uma Pessoa Juridica pelo CNPJ informado, se nao existir, cria
@@ -124,7 +128,7 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
   function buscaEndereco({ endereco, callBack }) {
     session
       .run(
-        `MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro, 
+        `MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
 complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro}) RETURN e`,
         endereco,
       )
@@ -134,12 +138,13 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
   }
 
   function criaEndereco({ endereco, callBack }) {
+    global.escritasEmEspera += 1;
     session
       .run(
-        `CREATE (e:Endereco { tipoLogradouro : $tipoLogradouro, 
-        logradouro : $logradouro, 
-        numero : $numero, 
-        complemento : $complemento, 
+        `CREATE (e:Endereco { tipoLogradouro : $tipoLogradouro,
+        logradouro : $logradouro,
+        numero : $numero,
+        complemento : $complemento,
         bairro : $bairro,
         cep : $cep,
         uf : $uf,
@@ -149,7 +154,10 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
         endereco,
       )
       .subscribe({
-        onNext: callBack,
+        onNext: (result) => {
+          global.escritasEmEspera -= 1;
+          callBack(result);
+        },
       });
   }
 
@@ -176,7 +184,7 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
   function buscaRelacaoEnderecoCNPJ({ endereco, callBack }) {
     session
       .run(
-        ` MATCH (:PessoaJuridica {cnpj: $cnpj})-[r:SEDIADA_EM]->(Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro, 
+        ` MATCH (:PessoaJuridica {cnpj: $cnpj})-[r:SEDIADA_EM]->(Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
 complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro}) RETURN r`,
         endereco,
       )
@@ -186,17 +194,21 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
   }
 
   function criaRelacaoEnderecoCNPJ({ endereco, callBack }) {
+    global.escritasEmEspera += 1;
     session
       .run(
         `MATCH (p:PessoaJuridica {cnpj: $cnpj})
-         MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro, 
-complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro}) 
+         MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
+complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro})
          CREATE (p)-[r:SEDIADA_EM]->(e)
          RETURN r })`,
         endereco,
       )
       .subscribe({
-        onNext: callBack,
+        onNext: (result) => {
+          global.escritasEmEspera -= 1;
+          callBack(result);
+        },
       });
   }
 

@@ -25,6 +25,11 @@ const neo4J = Neo4JDAOFactory({ uri: process.env.NEO4J_URI, login: process.env.N
     pathArquivo,
   });
 
+  // Declarando um global pois a leitura do arquivo da RF esta mais rapido do que o Neo4J esta conseguindo gravar
+  // Ao atingir um "saldo" de mais requisicoes de INSERT do que efetivamente realizado, a leitura do arquivo sera
+  // desacelerada. Para isso, precisaremos criar uma variavel global compartilhada entre os objetos de leitura RF e escrita Neo4J
+  global.escritasEmEspera = 0;
+
   receitaRederal.leia({
     filtroUF,
     filtroCidade,

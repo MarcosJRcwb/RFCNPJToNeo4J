@@ -42,9 +42,9 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
             cabecalhoLido = true;
           } else if (linha.substring(0, 1) === '1') {
             if (
-              (filtroUF == null || filtroUF.trim() == '' || linha.substr(682, 2) == filtroUF.toUpperCase())
-              && (filtroCidade == null || filtroCidade.trim() == '' || linha.substr(688, 50) == filtroCidade.toUpperCase())
-              && (filtroBairro == null || filtroBairro.trim() == '' || linha.substr(624, 50) == filtroBairro.toUpperCase())
+              (filtroUF == null || filtroUF.trim() === '' || linha.substr(682, 2) === filtroUF.toUpperCase())
+              && (filtroCidade == null || filtroCidade.trim() === '' || linha.substr(688, 50) === filtroCidade.toUpperCase())
+              && (filtroBairro == null || filtroBairro.trim() === '' || linha.substr(624, 50) === filtroBairro.toUpperCase())
               && (filtroIncluirBaixadas || linha.substr(223, 2) !== '08')
             ) {
               const cnpj = {};
@@ -96,6 +96,13 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               add(cnpj, 'optanteMEI', linha.substr(924, 1));
               add(cnpj, 'situacaoEspecial', linha.substr(925, 23));
               funcaoCallbackRegistro(cnpj);
+              // Se tem mais de 1000 linhas "de saldo" para gravar, espera pois o banco pode estar sobrecarregado
+              // Espera-se 10 segundos para cada 1000 em espera
+              while (global.escritasEmEspera > 1000) {
+                setTimeout(() => {
+                  console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${qtdLinhasParaGravar}`);
+                }, global.escritasEmEspera * 10);
+              }
             }
           } else if (linha.substring(0, 1) === '9') {
             funcaoCallbackFimArquivo();
