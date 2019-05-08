@@ -103,8 +103,9 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               // Espera-se 10 segundos para cada 1000 em espera
               console.log('Escritas em espera', colors.red(global.escritasEmEspera));
               while (global.escritasEmEspera > 300) {
-                console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${qtdLinhasParaGravar}`);
-                await wait(global.escritasEmEspera * 10);
+                 setTimeout(()=>{
+		 console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${global.escritasEmEspera}`);
+		 },global.escritasEmEspera*20);
               }
             }
           } else if (linha.substring(0, 1) === '9') {
