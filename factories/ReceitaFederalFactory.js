@@ -14,6 +14,8 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
   let nomeArquivo = path.basename(pathArquivo);
   let dataGravacao = null;
 
+  const wait = ms => new Promise((r, j) => setTimeout(r, ms));
+
   return Object.freeze({
     leia,
     nomeArquivo,
@@ -97,13 +99,12 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               add(cnpj, 'optanteMEI', linha.substr(924, 1));
               add(cnpj, 'situacaoEspecial', linha.substr(925, 23));
               funcaoCallbackRegistro(cnpj);
-              // Se tem mais de 1000 linhas "de saldo" para gravar, espera pois o banco pode estar sobrecarregado
+              // Se tem mais de 300 linhas "de saldo" para gravar, espera pois o banco pode estar sobrecarregado
               // Espera-se 10 segundos para cada 1000 em espera
               console.log('Escritas em espera', colors.red(global.escritasEmEspera));
-              while (global.escritasEmEspera > 1000) {
-                setTimeout(() => {
-                  console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${qtdLinhasParaGravar}`);
-                }, global.escritasEmEspera * 10);
+              while (global.escritasEmEspera > 300) {
+                console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${qtdLinhasParaGravar}`);
+                await wait(global.escritasEmEspera * 10);
               }
             }
           } else if (linha.substring(0, 1) === '9') {
