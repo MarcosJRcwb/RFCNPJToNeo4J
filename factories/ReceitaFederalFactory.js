@@ -34,6 +34,7 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
   function leia({
     filtroUF, filtroCidade, filtroBairro, filtroIncluirBaixadas, funcaoCallbackRegistro, funcaoCallbackFimArquivo,
   }) {
+    let ultimaQtdFilaEspera = 0;
     let cabecalhoLido = false;
     fs.createReadStream(pathArquivo)
       .pipe(es.split())
@@ -101,11 +102,14 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               funcaoCallbackRegistro(cnpj);
               // Se tem mais de 300 linhas "de saldo" para gravar, espera pois o banco pode estar sobrecarregado
               // Espera-se 10 segundos para cada 1000 em espera
-              console.log('Escritas em espera', colors.red(global.escritasEmEspera));
+              if (ultimaQtdFilaEspera !== global.escritasEmEspera) {
+                console.log('Escritas em espera', colors.red(global.escritasEmEspera));
+                ultimaQtdFilaEspera = global.escritasEmEspera;
+              }
               if (global.escritasEmEspera > 100) {
-                 setTimeout(()=>{
-		 console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${global.escritasEmEspera}`);
-		 },5000);
+                setTimeout(() => {
+                  console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${global.escritasEmEspera}`);
+                }, 50000);
               }
             }
           } else if (linha.substring(0, 1) === '9') {
