@@ -31,36 +31,17 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
   async function salvaPJ({ pj }) {
     linhasRecebidas++;
     try {
-      session.run('MATCH (p:PessoaJuridica {cnpj: $cnpj}) RETURN p.cnpj', pj).subscribe({
-        onNext(result) {
-          pj.endereco.cnpj = pj.cnpj;
-          // Se o CNPJ nao esta na base ainda, entao insere
-          // console.log(colors.yellow(pj.cnpj), JSON.stringify(result));
-          if (result.length == 0) {
-            criaPessoa({
-              pj,
-              callBack: (result) => {
-                linhasInseridas++;
-                console.log(`${linhasInseridas}/${linhasRecebidas} PJs importadas`);
-                buscaOuCriaEndereco({
-                  endereco: pj.endereco,
-                  callBack: (result) => {
-                    criaRelacaoEnderecoCNPJ({ endereco, callBack: (result) => {} });
-                  },
-                });
-              },
-            });
-          } else {
-            console.log(colors.green(`${pj.cnpj} ja presente na base de dados`));
-            buscaOuCriaEndereco({
-              endereco: pj.endereco,
-              callBack: (result) => {
-                buscaOuCriaRelacaoEnderecoCNPJ({ endereco: pj.endereco, callBack: (result) => {} });
-              },
-            });
-          }
-        },
-      });
+      const result = await session.run('MATCH (p:PessoaJuridica {cnpj: $cnpj}) RETURN p.cnpj', pj);
+      pj.endereco.cnpj = pj.cnpj;
+      // Se o CNPJ nao esta na base ainda, entao insere
+      // console.log(colors.yellow(pj.cnpj), JSON.stringify(result));
+      if (result.length === 0) {
+        await criaPessoa({ pj });
+        linhasInseridas++;
+        console.log(`${linhasInseridas}/${linhasRecebidas} PJs importadas`);
+      }
+      await buscaOuCriaEndereco({ endereco: pj.endereco });
+      await criaRelacaoEnderecoCNPJ({ endereco: pj.endereco });
       // console.log(pj.razaoSocial, pj.endereco.logradouro, pj.endereco.municipio, pj.endereco.uf);
     } catch (e) {
       console.error(e.message);
@@ -70,11 +51,10 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
     return true;
   }
 
-  function criaPessoa({ pj, callBack }) {
+  async function criaPessoa({ pj }) {
     global.escritasEmEspera += 1;
-    session
-      .run(
-        `CREATE (a:PessoaJuridica { cnpj : $cnpj,
+    const result = await session.run(
+      `CREATE (a:PessoaJuridica { cnpj : $cnpj,
       razaoSocial : $razaoSocial,
       nomeFantasia : $nomeFantasia,
       codigoSituacaoCadastral : $codigoSituacaoCadastral,
@@ -83,14 +63,11 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
       codigoNaturezaJuridica : $codigoNaturezaJuridica,
       dataInicioAtividade : $dataInicioAtividade,
       cnaePrincipal : $cnaePrincipal }) RETURN a`,
-        pj,
-      )
-      .subscribe({
-        onNext: (result) => {
-          global.escritasEmEspera -= 1;
-          callBack(result);
-        },
-      });
+      pj,
+    );
+    global.escritasEmEspera -= 1;
+    console.log(colors.green(`PJ ${pj.cnpj} inserida na base de dados com sucesso`));
+    return result;
 
     // Busca uma Pessoa Juridica pelo CNPJ informado, se nao existir, cria
     /* await session.run(
@@ -109,39 +86,27 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
     ); */
   }
 
-  function buscaOuCriaEndereco({ endereco, callBack }) {
-    buscaEndereco({
-      endereco,
-      callBack: (result) => {
-        if (result == null || result.length == 0) {
-          criaEndereco({ endereco, callBack });
-        } else {
-          console.log(
-            colors.green(`Endereco ${endereco.tipoLogradouro} ${endereco.logradouro} ${endereco.municipio}-${endereco.uf} ja presente na base de dados`),
-          );
-          callBack(result);
-        }
-      },
-    });
+  async function buscaOuCriaEndereco({ endereco }) {
+    const result = await buscaEndereco({ endereco });
+    if (result == null || result.length === 0) {
+      await criaEndereco({ endereco });
+      return true;
+    }
+    return false;
   }
 
-  function buscaEndereco({ endereco, callBack }) {
-    session
-      .run(
-        `MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
+  async function buscaEndereco({ endereco, callBack }) {
+    return await session.run(
+      `MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
 complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro}) RETURN e`,
-        endereco,
-      )
-      .subscribe({
-        onNext: callBack,
-      });
+      endereco,
+    );
   }
 
-  function criaEndereco({ endereco, callBack }) {
+  async function criaEndereco({ endereco }) {
     global.escritasEmEspera += 1;
-    session
-      .run(
-        `CREATE (e:Endereco { tipoLogradouro : $tipoLogradouro,
+    await session.run(
+      `CREATE (e:Endereco { tipoLogradouro : $tipoLogradouro,
         logradouro : $logradouro,
         numero : $numero,
         complemento : $complemento,
@@ -151,65 +116,47 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
         codigoMunicipio : $codigoMunicipio,
         municipio : $municipio })
          RETURN e `,
-        endereco,
-      )
-      .subscribe({
-        onNext: (result) => {
-          global.escritasEmEspera -= 1;
-          callBack(result);
-        },
-      });
-  }
-
-  function buscaOuCriaRelacaoEnderecoCNPJ({ endereco, callBack }) {
-    buscaRelacaoEnderecoCNPJ({
       endereco,
-      callBack: (result) => {
-        if (result == null || result.length == 0) {
-          criaRelacaoEnderecoCNPJ({ endereco, callBack });
-        } else {
-          console.log(
-            colors.green(
-              `CNPJ ${endereco.cnpj} SEDIADA_EM  ${endereco.tipoLogradouro} ${endereco.logradouro} ${endereco.municipio}-${
-                endereco.uf
-              } ja presente na base de dados`,
-            ),
-          );
-          callBack(result);
-        }
-      },
-    });
+    );
+    global.escritasEmEspera -= 1;
+    console.log(colors.green(`Endereco ${endereco.tipoLogradouro} ${endereco.logradouro} ${endereco.municipio}-${endereco.uf} ja inserido na base de dados`));
+    return true;
   }
 
-  function buscaRelacaoEnderecoCNPJ({ endereco, callBack }) {
-    session
-      .run(
-        ` MATCH (:PessoaJuridica {cnpj: $cnpj})-[r:SEDIADA_EM]->(Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
+  async function buscaOuCriaRelacaoEnderecoCNPJ({ endereco, callBack }) {
+    const result = await buscaRelacaoEnderecoCNPJ({ endereco });
+    if (result == null || result.length == 0) {
+      await criaRelacaoEnderecoCNPJ({ endereco, callBack });
+      return true;
+    }
+    return false;
+  }
+
+  async function buscaRelacaoEnderecoCNPJ({ endereco }) {
+    return await session.run(
+      ` MATCH (:PessoaJuridica {cnpj: $cnpj})-[r:SEDIADA_EM]->(Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
 complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro}) RETURN r`,
-        endereco,
-      )
-      .subscribe({
-        onNext: callBack,
-      });
+      endereco,
+    );
   }
 
-  function criaRelacaoEnderecoCNPJ({ endereco, callBack }) {
+  async function criaRelacaoEnderecoCNPJ({ endereco }) {
     global.escritasEmEspera += 1;
-    session
-      .run(
-        `MATCH (p:PessoaJuridica {cnpj: $cnpj})
+    await session.run(
+      `MATCH (p:PessoaJuridica {cnpj: $cnpj})
          MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
 complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro})
          CREATE (p)-[r:SEDIADA_EM]->(e)
          RETURN r })`,
-        endereco,
-      )
-      .subscribe({
-        onNext: (result) => {
-          global.escritasEmEspera -= 1;
-          callBack(result);
-        },
-      });
+      endereco,
+    );
+    global.escritasEmEspera -= 1;
+    console.log(
+      colors.green(
+        `CNPJ ${endereco.cnpj} SEDIADA_EM  ${endereco.tipoLogradouro} ${endereco.logradouro} ${endereco.municipio}-${endereco.uf} persistida na base`,
+      ),
+    );
+    return true;
   }
 
   /**
