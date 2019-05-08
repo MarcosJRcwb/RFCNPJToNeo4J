@@ -1,3 +1,4 @@
+const colors = require('colors');
 const fs = require('fs');
 const path = require('path');
 const es = require('event-stream');
@@ -98,6 +99,7 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
               funcaoCallbackRegistro(cnpj);
               // Se tem mais de 1000 linhas "de saldo" para gravar, espera pois o banco pode estar sobrecarregado
               // Espera-se 10 segundos para cada 1000 em espera
+              console.log('Escritas em espera', colors.red(global.escritasEmEspera));
               while (global.escritasEmEspera > 1000) {
                 setTimeout(() => {
                   console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${qtdLinhasParaGravar}`);
