@@ -106,10 +106,9 @@ module.exports = function ReceitaFederalFactory({ pathArquivo }) {
                 console.log('Escritas em espera', colors.red(global.escritasEmEspera));
                 ultimaQtdFilaEspera = global.escritasEmEspera;
               }
-              if (global.escritasEmEspera > 100) {
-                setTimeout(() => {
-                  console.log(`Aguardando gravação de registros no banco de dados para continuar leitura do arquivo: ${global.escritasEmEspera}`);
-                }, 50000);
+              while (global.escritasEmEspera > 10) {
+                // await wait(10000);
+                process.stdout.write(`Aguardando fila de escrita Neo4J: ${global.escritasEmEspera}`);
               }
             }
           } else if (linha.substring(0, 1) === '9') {
