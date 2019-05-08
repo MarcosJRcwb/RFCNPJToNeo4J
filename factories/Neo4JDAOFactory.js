@@ -53,8 +53,10 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
 
   async function criaPessoa({ pj }) {
     global.escritasEmEspera += 1;
-    const result = await session.run(
-      `CREATE (a:PessoaJuridica { cnpj : $cnpj,
+    let result = null;
+    try {
+      result = await session.run(
+        `CREATE (a:PessoaJuridica { cnpj : $cnpj,
       razaoSocial : $razaoSocial,
       nomeFantasia : $nomeFantasia,
       codigoSituacaoCadastral : $codigoSituacaoCadastral,
@@ -63,8 +65,11 @@ module.exports = function Neo4JDAOFactory({ uri, login, senha }) {
       codigoNaturezaJuridica : $codigoNaturezaJuridica,
       dataInicioAtividade : $dataInicioAtividade,
       cnaePrincipal : $cnaePrincipal }) RETURN a`,
-      pj,
-    );
+        pj,
+      );
+    } catch (e) {
+      console.error(colors.red(`Falha ao inserir CNPJ ${pj.cnpj}`), e);
+    }
     global.escritasEmEspera -= 1;
     console.log(colors.green(`PJ ${pj.cnpj} inserida na base de dados com sucesso`));
     return result;
@@ -105,8 +110,9 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
 
   async function criaEndereco({ endereco }) {
     global.escritasEmEspera += 1;
-    await session.run(
-      `CREATE (e:Endereco { tipoLogradouro : $tipoLogradouro,
+    try {
+      await session.run(
+        `CREATE (e:Endereco { tipoLogradouro : $tipoLogradouro,
         logradouro : $logradouro,
         numero : $numero,
         complemento : $complemento,
@@ -116,8 +122,11 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
         codigoMunicipio : $codigoMunicipio,
         municipio : $municipio })
          RETURN e `,
-      endereco,
-    );
+        endereco,
+      );
+    } catch (e) {
+      console.error(colors.red('Falha ao inserir endereço'), e);
+    }
     global.escritasEmEspera -= 1;
     console.log(colors.green(`Endereco ${endereco.tipoLogradouro} ${endereco.logradouro} ${endereco.municipio}-${endereco.uf} ja inserido na base de dados`));
     return true;
@@ -142,14 +151,18 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
 
   async function criaRelacaoEnderecoCNPJ({ endereco }) {
     global.escritasEmEspera += 1;
-    await session.run(
-      `MATCH (p:PessoaJuridica {cnpj: $cnpj})
+    try {
+      await session.run(
+        `MATCH (p:PessoaJuridica {cnpj: $cnpj})
          MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
 complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro})
          CREATE (p)-[r:SEDIADA_EM]->(e)
          RETURN r })`,
-      endereco,
-    );
+        endereco,
+      );
+    } catch (e) {
+      console.error(colors.red(`Falha ao inserir relação endereço ao CNPJ ${endereco.cnpj}`), e);
+    }
     global.escritasEmEspera -= 1;
     console.log(
       colors.green(
