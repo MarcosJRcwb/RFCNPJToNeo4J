@@ -157,7 +157,7 @@ complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogrado
          MATCH (e:Endereco {codigoMunicipio: $codigoMunicipio, bairro: $bairro,
 complemento: $complemento, numero: $numero, logradouro: $logradouro, tipoLogradouro: $tipoLogradouro})
          CREATE (p)-[r:SEDIADA_EM]->(e)
-         RETURN r })`,
+         RETURN r`,
         endereco,
       );
     } catch (e) {
